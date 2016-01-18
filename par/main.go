@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bufio"
 	"errors"
 	"flag"
 	"log"
@@ -11,6 +12,8 @@ import (
 	"sync"
 	"syscall"
 )
+
+var sflag = flag.Bool("s", false, "read commands from stdin")
 
 func main() {
 	flag.Parse()
@@ -24,16 +27,38 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// TODO(pxi): duplicate stdin for each command.
-	// TODO(pxi): read commands from stdin.
-	args := os.Args[1:]
-	cmds := make([]*exec.Cmd, len(args))
-	for i, arg := range args {
-		cmds[i] = exec.Command("sh", "-c", arg)
-		cmds[i].Stdout = os.Stdout
-		cmds[i].Stderr = os.Stderr
-		cmds[i].Env = env
-		cmds[i].Dir = dir
+	var cmds []*exec.Cmd
+	if *sflag {
+		s, err := os.Stdin.Stat()
+		if err == nil && s.Mode()&os.ModeCharDevice != 0 {
+			err = errors.New("stdin is empty")
+		}
+		if err != nil {
+			log.Fatal(err)
+		}
+		sc := bufio.NewScanner(os.Stdin)
+		for sc.Scan() {
+			cmd := exec.Command("sh", "-c", sc.Text())
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			cmd.Env = env
+			cmd.Dir = dir
+			cmds = append(cmds, cmd)
+		}
+		if sc.Err() != nil {
+			log.Fatal(err)
+		}
+	} else {
+		// TODO(pxi): duplicate stdin for each command.
+		arg := os.Args[1:]
+		cmds = make([]*exec.Cmd, len(arg))
+		for i, arg := range arg {
+			cmds[i] = exec.Command("sh", "-c", arg)
+			cmds[i].Stdout = os.Stdout
+			cmds[i].Stderr = os.Stderr
+			cmds[i].Env = env
+			cmds[i].Dir = dir
+		}
 	}
 
 	i, err := proc(run(cmds))
