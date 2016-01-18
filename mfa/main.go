@@ -36,10 +36,11 @@ func main() {
 		item.SetMatchLimit(keychain.MatchLimitAll)
 		item.SetReturnAttributes(true)
 		res, err = keychain.QueryItem(item)
-		if err == nil {
-			forEach(res, func(r keychain.QueryResult) {
-				fmt.Println(r.Account)
-			})
+		if err != nil {
+			break
+		}
+		for _, qres := range res {
+			fmt.Println(qres.Account)
 		}
 	case 1:
 		// Get mfa password for an account.
@@ -50,16 +51,17 @@ func main() {
 		if err == nil && len(res) == 0 {
 			err = errors.New("account not found")
 		}
-		if err == nil {
-			forEach(res, func(r keychain.QueryResult) {
-				totp := &otp.TOTP{
-					Secret:         string(r.Data),
-					Length:         otp.DefaultLength,
-					Period:         otp.DefaultPeriod,
-					IsBase32Secret: true,
-				}
-				fmt.Println(totp.Get())
-			})
+		if err != nil {
+			break
+		}
+		for _, qres := range res {
+			totp := &otp.TOTP{
+				Secret:         string(qres.Data),
+				Length:         otp.DefaultLength,
+				Period:         otp.DefaultPeriod,
+				IsBase32Secret: true,
+			}
+			fmt.Println(totp.Get())
 		}
 	case 2:
 		// Create a new account.
@@ -75,12 +77,6 @@ func main() {
 	}
 	if err != nil {
 		log.Fatal(err)
-	}
-}
-
-func forEach(items []keychain.QueryResult, fn func(keychain.QueryResult)) {
-	for _, item := range items {
-		fn(item)
 	}
 }
 
