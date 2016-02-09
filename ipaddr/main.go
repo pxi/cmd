@@ -10,7 +10,7 @@ import (
 
 func main() {
 	log.SetFlags(0)
-	log.SetPrefix("ipnow: ")
+	log.SetPrefix("ipaddr: ")
 
 	a, err := ipAddr()
 	if err != nil {
